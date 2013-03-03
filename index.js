@@ -28,7 +28,8 @@ function nmap(opts,app) {
 
 nmap.prototype.runNmap = function(cb) {
   var MINUTES = 5;
-  var command = 'nmap -oX /Users/dan/ninjaClient/ninja_modules/nmap/results.xml --open -p 3000,4567,8080,8000,4000,80 10.100.255.255/16';
+
+  var command = 'nmap -oX '+__dirname+'/results.xml --open -p 3000,4567,8080,8000,4000,80 10.100.255.255/16';
 
   var self = this;
 
