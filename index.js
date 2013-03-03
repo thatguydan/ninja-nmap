@@ -72,7 +72,7 @@ nmap.prototype.parseXML = function() {
 
     if (!DEBUG && !totalDevice) {
       totalDevice = new TotalCount();
-      this.emit('register', totalCount);
+      this.emit('register', totalDevice);
     }
 
     totalDevice.emit('data',data.host.length);
