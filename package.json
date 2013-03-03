@@ -1,12 +1,15 @@
 {
   "name": "nmap",
   "version": "0.0.0",
-  "description": "ERROR: No README.md file found!",
+  "description": "Nmap Ninja Module",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": "",
   "author": "",
-  "license": "BSD"
+  "license": "BSD",
+  "dependencies": {
+    "libxml-to-js": "~0.3.11"
+  }
 }
