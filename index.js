@@ -18,21 +18,51 @@ util.inherits(nmap,stream);
 // 2) Server count per port G: 80/3000/etc
 //
 
-var DEBUG = true;
+var DEBUG = false;
 
 function nmap(opts,app) {
+
   this.app = app;
-  app.on('client::up',this.parseXML.bind(this));
-
-
+  app.on('client::up',this.runNmap.bind(this));
 };
 
+nmap.prototype.runNmap = function(cb) {
+  var MINUTES = 5;
+  var command = 'nmap -oX /Users/dan/ninjaClient/ninja_modules/nmap/results.xml --open -p 3000,4567,8080,8000,4000,80 10.100.255.255/16';
 
+  var self = this;
 
+  var endAndParse = function() {
+
+    this.app.log.info('Ending Port Scan');
+    child.kill();
+
+    fs.appendFileSync(__dirname+'/results.xml','</nmaprun>');
+    this.parseXML();
+    var date = new Date();
+    fs.createReadStream(__dirname+'/results.xml').pipe(fs.createWriteStream(__dirname+'/results/results-'+date.toString()+'.xml'));
+
+    setTimeout(function() {
+
+      self.app.log.info('Beginning Port Scan');
+      child = exec(command);
+      setTimeout(endAndParse,MINUTES*60*1000);
+
+    },MINUTES*60*1000);
+
+  }.bind(this);
+
+  this.app.log.info('Beginning Port Scan');
+  var child = exec(command);
+  setTimeout(endAndParse,MINUTES*60*1000);
+};
+
+var totalDevice;
 nmap.prototype.parseXML = function() {
   var self = this;
   var xmlStr = fs.readFileSync(__dirname+'/results.xml').toString();
 
+  // Ugly hack to just get what nmap has outputted.
   if (xmlStr.indexOf('</nmaprun>')===-1) xmlStr += '</nmaprun>';
 
   xml(xmlStr,function(err,data) {
@@ -40,10 +70,12 @@ nmap.prototype.parseXML = function() {
     if (err) return;
     if (!data.host) return;
 
-    var totalCount = new TotalCount();
-    if (!DEBUG) this.emit('register', totalCount);
+    if (!DEBUG && !totalDevice) {
+      totalDevice = new TotalCount();
+      this.emit('register', totalCount);
+    }
 
-    totalCount.emit('data',data.host.length);
+    totalDevice.emit('data',data.host.length);
 
     var ports = {};
     // Iterate over all the ports, counting them up
