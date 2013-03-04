@@ -4,7 +4,8 @@ var TotalCount = require('./lib/totalCount.js')
   , stream = require('stream')
   , xml = require('libxml-to-js')
   , fs = require('fs')
-  , exec = require('child_process').exec;
+  , exec = require('child_process').exec
+  , screenshot = require('./screenshot');
 
 // Give our module a stream interface
 util.inherits(nmap,stream);
@@ -27,9 +28,10 @@ function nmap(opts,app) {
 };
 
 nmap.prototype.runNmap = function(cb) {
-  var MINUTES = 5;
 
-  var command = 'nmap -oX '+__dirname+'/results.xml --open -p 3000,4567,8080,8000,4000,80 10.100.255.255/16';
+  var MINUTES = 10;
+
+  var command = 'nmap -oX '+__dirname+'/results.xml --open -p 3000,4567,8080,8000,4000,80 10.100.*.*';
 
   var self = this;
 
@@ -38,8 +40,16 @@ nmap.prototype.runNmap = function(cb) {
     this.app.log.info('Ending Port Scan');
     child.kill();
 
-    fs.appendFileSync(__dirname+'/results.xml','</nmaprun>');
-    this.parseXML();
+    var xmlStr = fs.readFileSync(__dirname+'/results.xml').toString();
+
+    // Ugly hack to just get what nmap has outputted.
+    if (xmlStr.indexOf('</nmaprun>')===-1) {
+      fs.appendFileSync(__dirname+'/results.xml','</nmaprun>');
+      xmlStr += '</nmaprun>';
+    }
+
+    this.parseXML(xmlStr);
+
     var date = new Date();
     fs.createReadStream(__dirname+'/results.xml').pipe(fs.createWriteStream(__dirname+'/results/results-'+date.toString()+'.xml'));
 
@@ -49,7 +59,7 @@ nmap.prototype.runNmap = function(cb) {
       child = exec(command);
       setTimeout(endAndParse,MINUTES*60*1000);
 
-    },MINUTES*60*1000);
+    },4*60*1000);
 
   }.bind(this);
 
@@ -59,12 +69,8 @@ nmap.prototype.runNmap = function(cb) {
 };
 
 var totalDevice;
-nmap.prototype.parseXML = function() {
+nmap.prototype.parseXML = function(xmlStr) {
   var self = this;
-  var xmlStr = fs.readFileSync(__dirname+'/results.xml').toString();
-
-  // Ugly hack to just get what nmap has outputted.
-  if (xmlStr.indexOf('</nmaprun>')===-1) xmlStr += '</nmaprun>';
 
   xml(xmlStr,function(err,data) {
 
@@ -109,6 +115,8 @@ nmap.prototype.parseXML = function() {
       device.emit('data',ports[port]);
 
     }
+
+    screenshot(data);
   }.bind(this));
 
 };
